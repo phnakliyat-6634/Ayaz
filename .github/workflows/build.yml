@@ -1,0 +1,43 @@
+name: Ayaz APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Projeyi çıkar
+        run: |
+          if [ ! -f ayaz.zip ]; then echo "ayaz.zip bulunamadı"; exit 1; fi
+          rm -rf build-src && mkdir build-src && unzip -q ayaz.zip -d build-src
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: APK derle
+        working-directory: build-src/ayaz
+        run: gradle assembleRelease -PversionCode=${{ github.run_number }} --stacktrace
+
+      - name: APK dosyasını hazırla
+        run: cp build-src/ayaz/app/build/outputs/apk/release/app-release.apk ayaz-v${{ github.run_number }}.apk
+
+      - name: Sürüm yayınla
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Ayaz v${{ github.run_number }}
+          files: ayaz-v${{ github.run_number }}.apk
